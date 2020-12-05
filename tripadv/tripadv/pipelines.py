@@ -5,9 +5,31 @@
 
 
 # useful for handling different item types with a single interface
-from itemadapter import ItemAdapter
+# from itemadapter import ItemAdapter
 
 
-class TripadvPipeline:
+# class TripadvPipeline:
+#     def process_item(self, item, spider):
+#         return item
+
+
+from scrapy.exporters import CsvItemExporter
+
+# MUST CHANGE TO THIS CLASS IN SETTINGS ITEM_PIPELINES
+class WriteItemPipeline(object):
+
+    def __init__(self):
+        self.filename = 'tripadv.csv'
+
+    def open_spider(self, spider):
+        self.csvfile = open(self.filename, 'wb') #, newline = '')
+        self.exporter = CsvItemExporter(self.csvfile)
+        self.exporter.start_exporting()
+
+    def close_spider(self, spider):
+        self.exporter.finish_exporting()
+        self.csvfile.close()
+
     def process_item(self, item, spider):
+        self.exporter.export_item(item)
         return item
