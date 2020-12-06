@@ -89,21 +89,11 @@ class TripadvSpider(Spider):
                 'attraction': attraction}
 
         for pg_url in result_urls:
-            # print(pg_url)
             yield Request(url = pg_url, callback = self.parse_review_pages, meta=meta)
-            #should result in 3 pages of scraped reviews
 
 
     def parse_review_pages(self, response):
         reviews = response.xpath('.//div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')
-        
-        # print('**'*25)
-        # print(reviews[0])
-        # print(reviews[1])
-        # print(reviews[2])
-        # print(reviews[3])
-        # print(reviews[4])
-        # print('**'*25)
 
         for review in reviews:
             user = review.xpath('.//a[@class="ui_header_link _1r_My98y"]/text()').extract_first()
@@ -124,7 +114,8 @@ class TripadvSpider(Spider):
             rating = int(review.xpath('.//div[@data-test-target="review-rating"]//span/@class').extract_first().split(' bubble_')[1].strip('0') or '0')
             rev_title = review.xpath('.//div[@data-test-target="review-title"]//span/text()').extract_first()
             # no need for readmore button bc xpath gives us 2 blocks of text: 1st w/o read more 2nd w/ readmore
-            rev_text = re.sub(' +', ' ', ' '.join(review.xpath('.//q[@class="IRsGHoPm"]//text()').extract_first()))
+            # rev_text = re.sub(' +', ' ', ' '.join(response.xpath('.//q[@class="IRsGHoPm"]//text()').extract_first()))
+            rev_text = response.xpath('.//q[@class="IRsGHoPm"]//text()').extract_first()
             
             mo_yr_visited = review.xpath('.//span[@class="_34Xs-BQm"]/text()').extract_first().strip()
             
@@ -134,21 +125,6 @@ class TripadvSpider(Spider):
             except Exception as e:
                 print(type(e), e)
                 num_helpful_votes = 0
-
-            # print('**'*25)
-            # print('**'*25)
-            # print(user)
-            # print(mo_yr_posted)
-            # print(user_city)
-            # print(num_contributions_user)
-            # print(num_helpful_user)
-            # print(rating)
-            # print(rev_title)
-            # print(rev_text)
-            # print(mo_yr_visited)
-            # print(num_helpful_votes)
-            # print('=='*25)
-            # print('=='*25)
 
             item = TripadvItem()
 
@@ -167,15 +143,3 @@ class TripadvSpider(Spider):
             item['num_helpful_votes'] = num_helpful_votes
 
             yield item
-
-            # print('=='*25)
-            # print('=='*25)
-            # print('**'*25)
-            # print('**'*25)
-            # print(user)
-            # print('**'*25)
-            # print('**'*25)
-            # print('=='*25)
-            # print('=='*25)
-
-        # print('**END**'*10)
