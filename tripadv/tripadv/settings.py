@@ -66,6 +66,11 @@ ITEM_PIPELINES = {
    'tripadv.pipelines.WriteItemPipeline': 300,
 }
 
+# exports items from each start_url to a separate CSV
+# ITEM_PIPELINES = {
+#     'tripadv.pipelines.PerUrlCsvExportPipeline': 300,
+# }
+
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
 #AUTOTHROTTLE_ENABLED = True

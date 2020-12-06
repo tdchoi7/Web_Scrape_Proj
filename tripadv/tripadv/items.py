@@ -10,11 +10,13 @@ class TripadvItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
     
+    url = scrapy.Field()
+
     attraction_city = scrapy.Field()
     attraction = scrapy.Field()
 
     user = scrapy.Field()
-    user_city = scrapy.Field()
+    user_loc = scrapy.Field()
     rating = scrapy.Field()
     rev_title = scrapy.Field()
     num_contributions_user = scrapy.Field()
