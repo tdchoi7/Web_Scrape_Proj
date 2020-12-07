@@ -6,12 +6,10 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-# from selenium.webdriver.common.action_chains import ActionChains
 
 import time
 import re
-
-        # scrapy crawl tripadv_spider
+# scrapy crawl tripadv_spider
 
 class TripadvSpider(Spider):
     name = "tripadv_spider"
@@ -27,9 +25,9 @@ class TripadvSpider(Spider):
     
     start_urls = [
         'https://www.tripadvisor.com/Attractions-g60745-Activities-Boston_Massachusetts.html',
-        # 'https://www.tripadvisor.com/Attractions-g32655-Activities-Los_Angeles_California.html',
-        # 'https://www.tripadvisor.com/Attractions-g60763-Activities-New_York_City_New_York.html',
-        # 'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
+        'https://www.tripadvisor.com/Attractions-g32655-Activities-Los_Angeles_California.html',
+        'https://www.tripadvisor.com/Attractions-g60763-Activities-New_York_City_New_York.html',
+        'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
         ]
 
     
@@ -48,7 +46,7 @@ class TripadvSpider(Spider):
                 # once again, Boston's setup is different
                 # we have to use a stepwise function to skip the urls ending in '#REVIEWS' so that we
                 # do not have to account for those urls in parse_attractions_page's result_urls
-            attrctn_to_rvw = response.xpath('//div[@class="_20eVZLwe"]/div/a/@href').extract()[0:1:2]
+            attrctn_to_rvw = response.xpath('//div[@class="_20eVZLwe"]/div/a/@href').extract()[0:7:2]
            
             # add the partial urls to the root url for the full url for each attraction review page
             review_page_1st_urls = [self.allowed_urls[0] + partial for partial in attrctn_to_rvw]
@@ -56,12 +54,12 @@ class TripadvSpider(Spider):
         else:
             
             # get the partial urls for the reviews of the top 10 attractions
-            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[:1]
+            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[:4]
                 # results in:
                 # ['/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html']
             
             # add the partial urls to the root url for the full url for each attraction review page
-            review_page_1st_urls = [self.allowed_urls[0] + partial for partial in attrctn_to_rvw]
+            review_page_1st_urls = [self.allowed_urls[0] + partial + '#REVIEWS' for partial in attrctn_to_rvw]
             # results in:
             # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html']
 
@@ -74,8 +72,9 @@ class TripadvSpider(Spider):
         # results in:
         # 'The Getty Center'
 
-        attraction_city = ' '.join(response.xpath('//div[@class="eQSJNhO6"]/span/a/text()').extract_first().split()[4:])
-        # results in:
+        ##########################################################################################################################
+        # check for future errors
+        attraction_city = ' '.join(response.xpath('.//div[@class="eQSJNhO6"]//a//text()').extract_first().split()[4:])        
         # 'Los Angeles'
         
         # get number of pages to create list of urls for each review page
@@ -84,8 +83,8 @@ class TripadvSpider(Spider):
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
-        result_urls = [f'Reviews-or{(i-1)*5}-'.join(response.url.split('Reviews-'))+'#REVIEWS' for i in range(2,3)] # range(2,3)
-        result_urls.insert(0, response.url+'#REVIEWS')
+        result_urls = [f'Reviews-or{(i-1)*5}-'.join(response.url.split('Reviews-')) for i in range(2,4)] # range(2,3)
+        result_urls.insert(0, response.url)
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
         # 'www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-or5-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
@@ -97,37 +96,38 @@ class TripadvSpider(Spider):
         for pg_url in result_urls:
             yield Request(url = pg_url, callback = self.parse_review_pages, meta=meta)
 
-
-    # scrapy crawl tripadv_spider
-
     def parse_review_pages(self, response):
+
+        # gets the list of reviews using Scrapy
         reviews = response.xpath('.//div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')
         
         # use Selenium to switch to active browser
         driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
         driver.get(response.url)
-        driver.maximize_window()
         WebDriverWait(driver, 10)
+        driver.maximize_window()
+        # WebDriverWait(driver, 10)
         driver.switch_to.active_element
+        # WebDriverWait(driver, 10)
 
         # use selenium to click on 1st 'read more' element as that expands all other review texts
         readmore = driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
+        WebDriverWait(driver, 10)
         readmore.click()
         # Slows down the text expansion so the text can be scraped
-        time.sleep(.5)
+        time.sleep(2)
 
-        wait_review = WebDriverWait(driver, 10)
-        # selenium_reviews = wait_review.until(EC.presence_of_all_elements_located((By.XPATH, './/div[@data-test-target="reviews-tab"]')))
-
+        # gets the list of revies using Selenium
+        wait_review = WebDriverWait(driver, 15)
         selenium_reviews = wait_review.until(EC.presence_of_all_elements_located((By.XPATH, './/div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')))
-        # for selenium_review in selenium_reviews:
-        #     rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
 
-        # driver.quit()
-
+        # allows for concurrent scraping using Selenium and Scrapy
+            # since selenium was used to grab review text after clicking 'read more',
+            # review list using selenium was also used concurrently with scrapy list
         for selenium_review, review in zip(selenium_reviews, reviews):
             
             rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
+            rev_text = ' '.join(rev_text.split())
 
             user = review.xpath('.//a[@class="ui_header_link _1r_My98y"]/text()').extract_first()
             mo_yr_posted = review.xpath('.//div[@class="_2fxQ4TOx"]/span/text()').extract_first().split("review ")[1].strip()
@@ -144,14 +144,6 @@ class TripadvSpider(Spider):
             rating = int(review.xpath('.//div[@data-test-target="review-rating"]//span/@class').extract_first().split(' bubble_')[1].strip('0') or '0')
             rev_title = review.xpath('.//div[@data-test-target="review-title"]//span/text()').extract_first()
 
-        # scrapy crawl tripadv_spider
-            # rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
-
-            # selenium_review = wait_review.until(EC.presence_of_all_elements_located((By.XPATH,
-            #                         './/div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')))
-            # for selenium_review in selenium_reviews:
-            #     rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
-
             mo_yr_visited = review.xpath('.//span[@class="_34Xs-BQm"]/text()').extract_first().strip()
             
             try: 
@@ -162,10 +154,8 @@ class TripadvSpider(Spider):
                 num_helpful_votes = 0
 
             item = TripadvItem()
-
             item['attraction_city'] = response.meta['attraction_city']
             item['attraction'] = response.meta['attraction']
-
             item['user'] = user
             item['user_loc'] = user_loc
             item['rating'] = rating
@@ -178,5 +168,5 @@ class TripadvSpider(Spider):
             item['num_helpful_votes'] = num_helpful_votes
 
             yield item
-            
+
         driver.quit()
