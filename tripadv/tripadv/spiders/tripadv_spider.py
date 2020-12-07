@@ -31,6 +31,8 @@ class TripadvSpider(Spider):
         # 'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
         ]
 
+    driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
+
 
     def get_mo_yr_posted(self, mo_yr_post):
         """
@@ -156,7 +158,6 @@ class TripadvSpider(Spider):
         reviews = response.xpath('.//div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')
         
         # use Selenium to switch to active browser
-        driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
         driver.get(response.url)
         WebDriverWait(driver, 15)
         driver.maximize_window()
@@ -263,4 +264,4 @@ class TripadvSpider(Spider):
 
                 yield item
 
-        driver.quit()
+    driver.quit()
