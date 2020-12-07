@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from datetime import datetime
 import time
 import re
 # scrapy crawl tripadv_spider
@@ -25,12 +26,62 @@ class TripadvSpider(Spider):
     
     start_urls = [
         'https://www.tripadvisor.com/Attractions-g60745-Activities-Boston_Massachusetts.html',
-        'https://www.tripadvisor.com/Attractions-g32655-Activities-Los_Angeles_California.html',
+        # 'https://www.tripadvisor.com/Attractions-g32655-Activities-Los_Angeles_California.html',
         'https://www.tripadvisor.com/Attractions-g60763-Activities-New_York_City_New_York.html',
-        'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
+        # 'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
         ]
 
-    
+
+    def get_mo_yr_posted(self, mo_yr_post):
+        """
+        Converts the scraped review posted date to:
+        'month year' format
+        """
+        import calendar
+
+        # grabs month and day/year
+        mo_yr_post_group = re.search('(\S+) (\d+)', mo_yr_post)
+
+        # converts 'Today' to current month and year
+        if mo_yr_post == 'Today':
+            today = datetime.now() 
+            mo_yr_post = str(today.strftime('%h')) + ' ' + str(today.strftime('%Y'))
+            return mo_yr_post
+
+        # converts 'Yesterday' to yesterday's month and year
+        elif mo_yr_post == 'Yesterday':
+            today = datetime.now()
+
+            # accounts for change in month if yesterday was a diff month
+            if int(today.strftime('%d')) - 1 <= 0:
+                monthinteger = int(today.strftime('%m')) - 1
+
+                # accounts for change in year 
+                if monthinteger == 0:
+                    yearinteger = int(today.strftime('%Y')) - 1
+                    mo_yr_post = calendar.month_abbr[monthinteger] + ' ' + str(yearinteger)
+                    return mo_yr_post
+                
+                # if no change in year
+                else:
+                    mo_yr_post = calendar.month_abbr[monthinteger] + ' ' + str(today.strftime('%Y'))
+                    return mo_yr_post
+
+            # if no change in month
+            else:
+                mo_yr_post = str(today.strftime('%h')) + ' ' + str(today.strftime('%Y'))
+                return mo_yr_post
+
+        # if the number after the month is actually the day rather than the year
+        elif int(mo_yr_post_group.group(2)) <= 31:
+            today = datetime.now()
+            mo_yr_post = mo_yr_post_group.group(1) + ' ' + str(today.strftime('%Y'))
+            return mo_yr_post
+
+        else:
+            return mo_yr_post
+
+
     def start_requests(self):
         for start_url in self.start_urls:
             yield Request(url=start_url, callback=self.parse_attractions)
@@ -72,9 +123,12 @@ class TripadvSpider(Spider):
         # results in:
         # 'The Getty Center'
 
-        ##########################################################################################################################
-        # check for future errors
-        attraction_city = ' '.join(response.xpath('.//div[@class="eQSJNhO6"]//a//text()').extract_first().split()[4:])        
+        try:
+            attraction_city = response.xpath('.//div[@class="_2kPIXVEi"]//a//text()').extract_first()
+            attraction_city = ' '.join(attraction_city.split()[4:])
+        except Exception as e:
+            print(type(e), e)
+            attraction_city = 0
         # 'Los Angeles'
         
         # get number of pages to create list of urls for each review page
@@ -83,7 +137,7 @@ class TripadvSpider(Spider):
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
-        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(0, num_pages)] # range(2,3)
+        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(1, 10)] # range(2,3)
         result_urls.insert(0, response.url)
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
@@ -110,14 +164,7 @@ class TripadvSpider(Spider):
         driver.switch_to.active_element
         # WebDriverWait(driver, 10)
 
-        # use selenium to click on 1st 'read more' element as that expands all other review texts
-        readmore = driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
-        WebDriverWait(driver, 15)
-        readmore.click()
-        # Slows down the text expansion so the text can be scraped
-        time.sleep(2)
-
-        # gets the list of revies using Selenium
+        # gets the list of reviews using Selenium
         wait_review = WebDriverWait(driver, 15)
         selenium_reviews = wait_review.until(EC.presence_of_all_elements_located((By.XPATH, './/div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')))
 
@@ -126,47 +173,94 @@ class TripadvSpider(Spider):
             # review list using selenium was also used concurrently with scrapy list
         for selenium_review, review in zip(selenium_reviews, reviews):
             
-            rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
-            rev_text = ' '.join(rev_text.split())
-
-            user = review.xpath('.//a[@class="ui_header_link _1r_My98y"]/text()').extract_first()
+            # gets the month and year that review was posted
             mo_yr_posted = review.xpath('.//div[@class="_2fxQ4TOx"]/span/text()').extract_first().split("review ")[1].strip()
-            user_loc = review.xpath('.//span[@class="default _3J15flPT small"]/text()').extract_first()   
-            num_contributions_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[0]
-            
-            try: 
-                num_helpful_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[1]
-                num_helpful_user = int(re.findall('\d+', num_helpful_user)[0])
-            except Exception as e:
-                print(type(e), e)
-                num_helpful_user = 0
-            
-            rating = int(review.xpath('.//div[@data-test-target="review-rating"]//span/@class').extract_first().split(' bubble_')[1].strip('0') or '0')
-            rev_title = review.xpath('.//div[@data-test-target="review-title"]//span/text()').extract_first()
 
-            mo_yr_visited = review.xpath('.//span[@class="_34Xs-BQm"]/text()').extract_first().strip()
+            # Skips the review if the month and year posted is prior to Jan 2018
+            mo_yr_posted_obj = datetime.strptime(mo_yr_posted, '%b %Y')
+            posted_year = mo_yr_posted_obj.year
+            if posted_year < 2019:
+                break
+            else:
             
-            try: 
-                num_helpful_votes = review.xpath('.//span[@class="_3kbymg8R _2o1bmw1O"]/text()').extract_first()
-                num_helpful_votes = int(re.findall('\d+', num_helpful_votes)[0])
-            except Exception as e:
-                print(type(e), e)
-                num_helpful_votes = 0
+                # convert 'yesterday' or 'month day' to 'month year'
+                mo_yr_posted_final = self.get_mo_yr_posted(mo_yr_posted)
 
-            item = TripadvItem()
-            item['attraction_city'] = response.meta['attraction_city']
-            item['attraction'] = response.meta['attraction']
-            item['user'] = user
-            item['user_loc'] = user_loc
-            item['rating'] = rating
-            item['rev_title'] = rev_title
-            item['num_contributions_user'] = num_contributions_user
-            item['num_helpful_user'] = num_helpful_user
-            item['rev_text'] = rev_text
-            item['mo_yr_posted'] = mo_yr_posted
-            item['mo_yr_visited'] = mo_yr_visited
-            item['num_helpful_votes'] = num_helpful_votes
+                # gets month and year visited if it exists
+                try:
+                    mo_yr_visited = review.xpath('.//span[@class="_34Xs-BQm"]/text()').extract_first()
+                    mo_yr_visited = mo_yr_visited.strip()
+                except Exception as e:
+                    print(type(e), e)
+                    mo_yr_visited = 0
+                
+                # use selenium to click on 1st 'read more' element as that expands all other review texts
+                try:
+                    readmore = driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
+                    WebDriverWait(driver, 15)
+                    readmore.click()
+                    # Slows down the text expansion so the text can be scraped
+                    time.sleep(2)
+                except:
+                    pass
 
-            yield item
+                # get review text (there were some errors encountered during testing, so used 'try')
+                try:
+                    rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
+                    rev_text = ' '.join(rev_text.split())
+                except Exception as e:
+                    print(type(e), e)
+                    rev_text = 0
+
+                # grabs username
+                user = review.xpath('.//a[@class="ui_header_link _1r_My98y"]/text()').extract_first()
+
+                # grabs user location if it exists
+                try:
+                    user_loc = review.xpath('.//span[@class="default _3J15flPT small"]/text()').extract_first()
+                except Exception as e:
+                    print(type(e), e)
+                    user_loc = 0
+
+                # grabs the number of contributions (should be minimum of 1)
+                num_contributions_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[0]
+                
+                # gets the number of total helpful votes the user has accumulated
+                try: 
+                    num_helpful_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[1]
+                    num_helpful_user = int(re.findall('\d+', num_helpful_user)[0])
+                except Exception as e:
+                    print(type(e), e)
+                    num_helpful_user = 0
+                
+                # get user rating
+                rating = int(review.xpath('.//div[@data-test-target="review-rating"]//span/@class').extract_first().split(' bubble_')[1].strip('0') or '0')
+
+                # get review title
+                rev_title = review.xpath('.//div[@data-test-target="review-title"]//span/text()').extract_first()
+
+                # gets number of helpful votes for that particular review
+                try: 
+                    num_helpful_votes = review.xpath('.//span[@class="_3kbymg8R _2o1bmw1O"]/text()').extract_first()
+                    num_helpful_votes = int(re.findall('\d+', num_helpful_votes)[0])
+                except Exception as e:
+                    print(type(e), e)
+                    num_helpful_votes = 0
+
+                item = TripadvItem()
+                item['attraction_city'] = response.meta['attraction_city']
+                item['attraction'] = response.meta['attraction']
+                item['user'] = user
+                item['user_loc'] = user_loc
+                item['rating'] = rating
+                item['rev_title'] = rev_title
+                item['num_contributions_user'] = num_contributions_user
+                item['num_helpful_user'] = num_helpful_user
+                item['rev_text'] = rev_text
+                item['mo_yr_posted_final'] = mo_yr_posted_final
+                item['mo_yr_visited'] = mo_yr_visited
+                item['num_helpful_votes'] = num_helpful_votes
+
+                yield item
 
         driver.quit()

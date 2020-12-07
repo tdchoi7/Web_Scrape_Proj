@@ -20,7 +20,7 @@ class TripadvItem(scrapy.Item):
     num_contributions_user = scrapy.Field()
     num_helpful_user = scrapy.Field()
     rev_text = scrapy.Field()
-    mo_yr_posted = scrapy.Field()
+    mo_yr_posted_final = scrapy.Field()
     mo_yr_visited = scrapy.Field()
     num_helpful_votes = scrapy.Field()
 
