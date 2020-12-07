@@ -46,7 +46,7 @@ class TripadvSpider(Spider):
                 # once again, Boston's setup is different
                 # we have to use a stepwise function to skip the urls ending in '#REVIEWS' so that we
                 # do not have to account for those urls in parse_attractions_page's result_urls
-            attrctn_to_rvw = response.xpath('//div[@class="_20eVZLwe"]/div/a/@href').extract()[0:7:2]
+            attrctn_to_rvw = response.xpath('//div[@class="_20eVZLwe"]/div/a/@href').extract()[0:9:2]
            
             # add the partial urls to the root url for the full url for each attraction review page
             review_page_1st_urls = [self.allowed_urls[0] + partial for partial in attrctn_to_rvw]
@@ -54,7 +54,7 @@ class TripadvSpider(Spider):
         else:
             
             # get the partial urls for the reviews of the top 10 attractions
-            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[:4]
+            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[:6]
                 # results in:
                 # ['/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html']
             
@@ -83,7 +83,7 @@ class TripadvSpider(Spider):
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
-        result_urls = [f'Reviews-or{(i-1)*5}-'.join(response.url.split('Reviews-')) for i in range(2,4)] # range(2,3)
+        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(0, num_pages)] # range(2,3)
         result_urls.insert(0, response.url)
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
@@ -104,7 +104,7 @@ class TripadvSpider(Spider):
         # use Selenium to switch to active browser
         driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
         driver.get(response.url)
-        WebDriverWait(driver, 10)
+        WebDriverWait(driver, 15)
         driver.maximize_window()
         # WebDriverWait(driver, 10)
         driver.switch_to.active_element
@@ -112,7 +112,7 @@ class TripadvSpider(Spider):
 
         # use selenium to click on 1st 'read more' element as that expands all other review texts
         readmore = driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
-        WebDriverWait(driver, 10)
+        WebDriverWait(driver, 15)
         readmore.click()
         # Slows down the text expansion so the text can be scraped
         time.sleep(2)
