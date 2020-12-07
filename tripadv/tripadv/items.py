@@ -9,8 +9,6 @@ import scrapy
 class TripadvItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
-    
-    url = scrapy.Field()
 
     attraction_city = scrapy.Field()
     attraction = scrapy.Field()

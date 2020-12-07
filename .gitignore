@@ -13,3 +13,5 @@ node_modules
 .BasicInfo
 
 .scrapy
+
+.mydriver

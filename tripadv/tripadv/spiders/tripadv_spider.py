@@ -1,6 +1,14 @@
 
 from scrapy import Spider, Request
 from tripadv.items import TripadvItem
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.common.action_chains import ActionChains
+
+import time
 import re
 
         # scrapy crawl tripadv_spider
@@ -19,16 +27,14 @@ class TripadvSpider(Spider):
     
     start_urls = [
         'https://www.tripadvisor.com/Attractions-g60745-Activities-Boston_Massachusetts.html',
-        'https://www.tripadvisor.com/Attractions-g32655-Activities-Los_Angeles_California.html',
+        # 'https://www.tripadvisor.com/Attractions-g32655-Activities-Los_Angeles_California.html',
         # 'https://www.tripadvisor.com/Attractions-g60763-Activities-New_York_City_New_York.html',
         # 'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
         ]
 
-
+    
     def start_requests(self):
         for start_url in self.start_urls:
-            # item = TripadvItem()
-            # item['url'] = start_url
             yield Request(url=start_url, callback=self.parse_attractions)
 
 
@@ -78,7 +84,7 @@ class TripadvSpider(Spider):
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
-        result_urls = [f'Reviews-or{(i-1)*5}-'.join(response.url.split('Reviews-'))+'#REVIEWS' for i in range(2,4)]
+        result_urls = [f'Reviews-or{(i-1)*5}-'.join(response.url.split('Reviews-'))+'#REVIEWS' for i in range(2,3)] # range(2,3)
         result_urls.insert(0, response.url+'#REVIEWS')
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
@@ -92,18 +98,42 @@ class TripadvSpider(Spider):
             yield Request(url = pg_url, callback = self.parse_review_pages, meta=meta)
 
 
+    # scrapy crawl tripadv_spider
+
     def parse_review_pages(self, response):
         reviews = response.xpath('.//div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')
+        
+        # use Selenium to switch to active browser
+        driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
+        driver.get(response.url)
+        driver.maximize_window()
+        WebDriverWait(driver, 10)
+        driver.switch_to.active_element
 
-        for review in reviews:
+        # use selenium to click on 1st 'read more' element as that expands all other review texts
+        readmore = driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
+        readmore.click()
+        # Slows down the text expansion so the text can be scraped
+        time.sleep(.5)
+
+        wait_review = WebDriverWait(driver, 10)
+        # selenium_reviews = wait_review.until(EC.presence_of_all_elements_located((By.XPATH, './/div[@data-test-target="reviews-tab"]')))
+
+        selenium_reviews = wait_review.until(EC.presence_of_all_elements_located((By.XPATH, './/div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')))
+        # for selenium_review in selenium_reviews:
+        #     rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
+
+        # driver.quit()
+
+        for selenium_review, review in zip(selenium_reviews, reviews):
+            
+            rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
+
             user = review.xpath('.//a[@class="ui_header_link _1r_My98y"]/text()').extract_first()
             mo_yr_posted = review.xpath('.//div[@class="_2fxQ4TOx"]/span/text()').extract_first().split("review ")[1].strip()
-            
-            user_loc = review.xpath('.//span[@class="default _3J15flPT small"]/text()').extract_first()
-                
+            user_loc = review.xpath('.//span[@class="default _3J15flPT small"]/text()').extract_first()   
             num_contributions_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[0]
             
-            # need to correct this
             try: 
                 num_helpful_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[1]
                 num_helpful_user = int(re.findall('\d+', num_helpful_user)[0])
@@ -113,10 +143,15 @@ class TripadvSpider(Spider):
             
             rating = int(review.xpath('.//div[@data-test-target="review-rating"]//span/@class').extract_first().split(' bubble_')[1].strip('0') or '0')
             rev_title = review.xpath('.//div[@data-test-target="review-title"]//span/text()').extract_first()
-            # no need for readmore button bc xpath gives us 2 blocks of text: 1st w/o read more 2nd w/ readmore
-            # rev_text = re.sub(' +', ' ', ' '.join(response.xpath('.//q[@class="IRsGHoPm"]//text()').extract_first()))
-            rev_text = response.xpath('.//q[@class="IRsGHoPm"]//text()').extract_first()
-            
+
+        # scrapy crawl tripadv_spider
+            # rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
+
+            # selenium_review = wait_review.until(EC.presence_of_all_elements_located((By.XPATH,
+            #                         './/div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')))
+            # for selenium_review in selenium_reviews:
+            #     rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
+
             mo_yr_visited = review.xpath('.//span[@class="_34Xs-BQm"]/text()').extract_first().strip()
             
             try: 
@@ -143,3 +178,5 @@ class TripadvSpider(Spider):
             item['num_helpful_votes'] = num_helpful_votes
 
             yield item
+            
+        driver.quit()
