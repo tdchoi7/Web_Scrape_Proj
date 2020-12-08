@@ -140,7 +140,9 @@ class TripadvSpider(Spider):
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
-        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(20)] # range(2,3)
+        # gets the first 100 pages of reviews (totaling 500 reviews) for each attraction
+            # this will get us 2500 total reviews per city
+        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(99)] # range(2,3)
         result_urls.insert(0, response.url)
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
@@ -183,16 +185,16 @@ class TripadvSpider(Spider):
             # convert 'yesterday' or 'month day' to 'month year'
             mo_yr_posted_final = self.get_mo_yr_posted(mo_yr_posted)
             
-            # # Skips the review if the month and year posted is prior to Jan 2018
-            mo_yr_posted_obj = datetime.strptime(mo_yr_posted_final, '%b %Y')
+            # # Skips the review if the month and year posted is prior to Jan 2019
+            # mo_yr_posted_obj = datetime.strptime(mo_yr_posted_final, '%b %Y')
             
-            # global posted_year 
-            posted_year = mo_yr_posted_obj.year
+            # # global posted_year 
+            # posted_year = mo_yr_posted_obj.year
             
             # scrapy crawl tripadv_spider
 
             # if posted_year < 2019:
-            #     raise CloseSpider('Up to 2019')
+            #     break
             # else:
                 
             # gets month and year visited if it exists
