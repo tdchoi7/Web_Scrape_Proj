@@ -99,7 +99,7 @@ class TripadvSpider(Spider):
                 # once again, Boston's setup is different
                 # we have to use a stepwise function to skip the urls ending in '#REVIEWS' so that we
                 # do not have to account for those urls in parse_attractions_page's result_urls
-            attrctn_to_rvw = response.xpath('//div[@class="_20eVZLwe"]/div/a/@href').extract()[0:3:2]
+            attrctn_to_rvw = response.xpath('//div[@class="_20eVZLwe"]/div/a/@href').extract()[0:9:2]
            
             # add the partial urls to the root url for the full url for each attraction review page
             review_page_1st_urls = [self.allowed_urls[0] + partial for partial in attrctn_to_rvw]
@@ -107,7 +107,7 @@ class TripadvSpider(Spider):
         else:
             
             # get the partial urls for the reviews of the top 10 attractions
-            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[:2]
+            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[:5]
                 # results in:
                 # ['/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html']
             
@@ -140,8 +140,8 @@ class TripadvSpider(Spider):
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
-        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(num_pages)] # range(2,3)
-        # result_urls.insert(0, response.url)
+        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(20)] # range(2,3)
+        result_urls.insert(0, response.url)
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
         # 'www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-or5-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
@@ -162,14 +162,14 @@ class TripadvSpider(Spider):
         # use Selenium to switch to active browser
         driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
         driver.get(response.url)
-        WebDriverWait(driver, 20)
+        WebDriverWait(driver, 10)
         driver.maximize_window()
         # WebDriverWait(driver, 10)
         driver.switch_to.active_element
         # WebDriverWait(driver, 10)
 
         # gets the list of reviews using Selenium
-        wait_review = WebDriverWait(driver, 20)
+        wait_review = WebDriverWait(driver, 10)
         selenium_reviews = wait_review.until(EC.presence_of_all_elements_located((By.XPATH, './/div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')))
 
         # allows for concurrent scraping using Selenium and Scrapy
@@ -185,90 +185,92 @@ class TripadvSpider(Spider):
             
             # # Skips the review if the month and year posted is prior to Jan 2018
             mo_yr_posted_obj = datetime.strptime(mo_yr_posted_final, '%b %Y')
+            
+            # global posted_year 
             posted_year = mo_yr_posted_obj.year
             
             # scrapy crawl tripadv_spider
 
-            if posted_year < 2019:
-                break
-            else:
+            # if posted_year < 2019:
+            #     raise CloseSpider('Up to 2019')
+            # else:
                 
-                # gets month and year visited if it exists
-                try:
-                    mo_yr_visited = review.xpath('.//span[@class="_34Xs-BQm"]/text()').extract_first()
-                    mo_yr_visited = mo_yr_visited.strip()
-                except Exception as e:
-                    print(type(e), e)
-                    mo_yr_visited = 0
-                   
-                # use selenium to click on 1st 'read more' element as that expands all other review texts
-                try:
-                    readmore = driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
-                    WebDriverWait(driver, 20)
-                    readmore.click()
-                    # Slows down the text expansion so the text can be scraped
-                    time.sleep(3)
-                except:
-                    pass
+            # gets month and year visited if it exists
+            try:
+                mo_yr_visited = review.xpath('.//span[@class="_34Xs-BQm"]/text()').extract_first()
+                mo_yr_visited = mo_yr_visited.strip()
+            except Exception as e:
+                print(type(e), e)
+                mo_yr_visited = 0
+               
+            # use selenium to click on 1st 'read more' element as that expands all other review texts
+            try:
+                readmore = driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
+                WebDriverWait(driver, 10)
+                readmore.click()
+                # Slows down the text expansion so the text can be scraped
+                time.sleep(1)
+            except:
+                pass
 
-                # get review text (there were some errors encountered during testing, so used 'try')
-                try:
-                    rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
-                    rev_text = ' '.join(rev_text.split())
-                except Exception as e:
-                    print(type(e), e)
-                    rev_text = 0
+            # get review text (there were some errors encountered during testing, so used 'try')
+            try:
+                rev_text = selenium_review.find_element_by_xpath('.//q[@class="IRsGHoPm"]').text
+                rev_text = ' '.join(rev_text.split())
+            except Exception as e:
+                print(type(e), e)
+                rev_text = 0
 
-                # grabs username
-                user = review.xpath('.//a[@class="ui_header_link _1r_My98y"]/text()').extract_first()
+            # grabs username
+            user = review.xpath('.//a[@class="ui_header_link _1r_My98y"]/text()').extract_first()
 
-                # grabs user location if it exists
-                try:
-                    user_loc = review.xpath('.//span[@class="default _3J15flPT small"]/text()').extract_first()
-                except Exception as e:
-                    print(type(e), e)
-                    user_loc = 0
+            # grabs user location if it exists
+            try:
+                user_loc = review.xpath('.//span[@class="default _3J15flPT small"]/text()').extract_first()
+            except Exception as e:
+                print(type(e), e)
+                user_loc = 0
 
-                # grabs the number of contributions (should be minimum of 1)
-                num_contributions_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[0]
+            # grabs the number of contributions (should be minimum of 1)
+            num_contributions_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[0]
+            
+            # gets the number of total helpful votes the user has accumulated
+            try: 
+                num_helpful_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[1]
+                num_helpful_user = int(re.findall('\d+', num_helpful_user)[0])
+            except Exception as e:
+                print(type(e), e)
+                num_helpful_user = 0
                 
-                # gets the number of total helpful votes the user has accumulated
-                try: 
-                    num_helpful_user = review.xpath('.//span[@class="_1fk70GUn"]/text()').extract()[1]
-                    num_helpful_user = int(re.findall('\d+', num_helpful_user)[0])
-                except Exception as e:
-                    print(type(e), e)
-                    num_helpful_user = 0
-                    
-                # get user rating
-                rating = int(review.xpath('.//div[@data-test-target="review-rating"]//span/@class').extract_first().split(' bubble_')[1].strip('0') or '0')
+            # get user rating
+            rating = int(review.xpath('.//div[@data-test-target="review-rating"]//span/@class').extract_first().split(' bubble_')[1].strip('0') or '0')
 
-                # get review title
-                rev_title = review.xpath('.//div[@data-test-target="review-title"]//span/text()').extract_first()
+            # get review title
+            rev_title = review.xpath('.//div[@data-test-target="review-title"]//span/text()').extract_first()
 
-                # gets number of helpful votes for that particular review
-                try: 
-                    num_helpful_votes = review.xpath('.//span[@class="_3kbymg8R _2o1bmw1O"]/text()').extract_first()
-                    num_helpful_votes = int(re.findall('\d+', num_helpful_votes)[0])
-                except Exception as e:
-                    print(type(e), e)
-                    num_helpful_votes = 0
+            # gets number of helpful votes for that particular review
+            try: 
+                num_helpful_votes = review.xpath('.//span[@class="_3kbymg8R _2o1bmw1O"]/text()').extract_first()
+                num_helpful_votes = int(re.findall('\d+', num_helpful_votes)[0])
+            except Exception as e:
+                print(type(e), e)
+                num_helpful_votes = 0
 
-                item = TripadvItem()
-                item['attraction_city'] = response.meta['attraction_city']
-                item['attraction'] = response.meta['attraction']
-                item['user'] = user
-                item['user_loc'] = user_loc
-                item['rating'] = rating
-                item['rev_title'] = rev_title
-                item['num_contributions_user'] = num_contributions_user
-                item['num_helpful_user'] = num_helpful_user
-                item['rev_text'] = rev_text
-                item['mo_yr_posted_final'] = mo_yr_posted_final
-                item['mo_yr_visited'] = mo_yr_visited
-                item['num_helpful_votes'] = num_helpful_votes
+            item = TripadvItem()
+            item['attraction_city'] = response.meta['attraction_city']
+            item['attraction'] = response.meta['attraction']
+            item['user'] = user
+            item['user_loc'] = user_loc
+            item['rating'] = rating
+            item['rev_title'] = rev_title
+            item['num_contributions_user'] = num_contributions_user
+            item['num_helpful_user'] = num_helpful_user
+            item['rev_text'] = rev_text
+            item['mo_yr_posted_final'] = mo_yr_posted_final
+            item['mo_yr_visited'] = mo_yr_visited
+            item['num_helpful_votes'] = num_helpful_votes
 
-                yield item
+            yield item
 
         driver.quit()
 
