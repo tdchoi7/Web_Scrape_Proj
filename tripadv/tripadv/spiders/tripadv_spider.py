@@ -31,8 +31,6 @@ class TripadvSpider(Spider):
         # 'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
         ]
 
-    driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
-
 
     def get_mo_yr_posted(self, mo_yr_post):
         """
@@ -85,6 +83,7 @@ class TripadvSpider(Spider):
 
 
     def start_requests(self):
+                
         for start_url in self.start_urls:
             yield Request(url=start_url, callback=self.parse_attractions)
 
@@ -121,6 +120,7 @@ class TripadvSpider(Spider):
 
 
     def parse_attractions_page(self, response):
+        
         attraction = response.xpath('//h1[@class="ui_header h1"]/text()').extract_first()
         # results in:
         # 'The Getty Center'
@@ -139,7 +139,7 @@ class TripadvSpider(Spider):
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
-        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(1, 10)] # range(2,3)
+        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(1, num_pages)] # range(2,3)
         result_urls.insert(0, response.url)
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
@@ -158,6 +158,7 @@ class TripadvSpider(Spider):
         reviews = response.xpath('.//div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')
         
         # use Selenium to switch to active browser
+        driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
         driver.get(response.url)
         WebDriverWait(driver, 15)
         driver.maximize_window()
@@ -264,4 +265,4 @@ class TripadvSpider(Spider):
 
                 yield item
 
-    driver.quit()
+        driver.quit()
