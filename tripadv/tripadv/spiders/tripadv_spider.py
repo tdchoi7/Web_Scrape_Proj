@@ -1,5 +1,6 @@
 
 from scrapy import Spider, Request
+from scrapy.exceptions import CloseSpider
 from tripadv.items import TripadvItem
 
 from selenium import webdriver
@@ -26,9 +27,9 @@ class TripadvSpider(Spider):
     
     start_urls = [
         'https://www.tripadvisor.com/Attractions-g60745-Activities-Boston_Massachusetts.html',
-        # 'https://www.tripadvisor.com/Attractions-g32655-Activities-Los_Angeles_California.html',
+        'https://www.tripadvisor.com/Attractions-g32655-Activities-Los_Angeles_California.html',
         'https://www.tripadvisor.com/Attractions-g60763-Activities-New_York_City_New_York.html',
-        # 'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
+        'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
         ]
 
 
@@ -94,11 +95,11 @@ class TripadvSpider(Spider):
             # therefore, we need if statement to treat the xpath on the pages differently
         if response.url == self.start_urls[0]:
             
-            # get the partial urls for the reviews of the top 10 attractions
+            # get the partial urls for the reviews of the top 5 attractions
                 # once again, Boston's setup is different
                 # we have to use a stepwise function to skip the urls ending in '#REVIEWS' so that we
                 # do not have to account for those urls in parse_attractions_page's result_urls
-            attrctn_to_rvw = response.xpath('//div[@class="_20eVZLwe"]/div/a/@href').extract()[0:9:2]
+            attrctn_to_rvw = response.xpath('//div[@class="_20eVZLwe"]/div/a/@href').extract()[0:3:2]
            
             # add the partial urls to the root url for the full url for each attraction review page
             review_page_1st_urls = [self.allowed_urls[0] + partial for partial in attrctn_to_rvw]
@@ -106,7 +107,7 @@ class TripadvSpider(Spider):
         else:
             
             # get the partial urls for the reviews of the top 10 attractions
-            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[:6]
+            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[:2]
                 # results in:
                 # ['/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html']
             
@@ -139,8 +140,8 @@ class TripadvSpider(Spider):
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
-        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(1, num_pages)] # range(2,3)
-        result_urls.insert(0, response.url)
+        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(num_pages)] # range(2,3)
+        # result_urls.insert(0, response.url)
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
         # 'www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-or5-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
@@ -152,6 +153,7 @@ class TripadvSpider(Spider):
         for pg_url in result_urls:
             yield Request(url = pg_url, callback = self.parse_review_pages, meta=meta)
 
+
     def parse_review_pages(self, response):
 
         # gets the list of reviews using Scrapy
@@ -160,14 +162,14 @@ class TripadvSpider(Spider):
         # use Selenium to switch to active browser
         driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
         driver.get(response.url)
-        WebDriverWait(driver, 15)
+        WebDriverWait(driver, 20)
         driver.maximize_window()
         # WebDriverWait(driver, 10)
         driver.switch_to.active_element
         # WebDriverWait(driver, 10)
 
         # gets the list of reviews using Selenium
-        wait_review = WebDriverWait(driver, 15)
+        wait_review = WebDriverWait(driver, 20)
         selenium_reviews = wait_review.until(EC.presence_of_all_elements_located((By.XPATH, './/div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')))
 
         # allows for concurrent scraping using Selenium and Scrapy
@@ -178,16 +180,19 @@ class TripadvSpider(Spider):
             # gets the month and year that review was posted
             mo_yr_posted = review.xpath('.//div[@class="_2fxQ4TOx"]/span/text()').extract_first().split("review ")[1].strip()
 
-            # Skips the review if the month and year posted is prior to Jan 2018
-            mo_yr_posted_obj = datetime.strptime(mo_yr_posted, '%b %Y')
+            # convert 'yesterday' or 'month day' to 'month year'
+            mo_yr_posted_final = self.get_mo_yr_posted(mo_yr_posted)
+            
+            # # Skips the review if the month and year posted is prior to Jan 2018
+            mo_yr_posted_obj = datetime.strptime(mo_yr_posted_final, '%b %Y')
             posted_year = mo_yr_posted_obj.year
+            
+            # scrapy crawl tripadv_spider
+
             if posted_year < 2019:
                 break
             else:
-            
-                # convert 'yesterday' or 'month day' to 'month year'
-                mo_yr_posted_final = self.get_mo_yr_posted(mo_yr_posted)
-
+                
                 # gets month and year visited if it exists
                 try:
                     mo_yr_visited = review.xpath('.//span[@class="_34Xs-BQm"]/text()').extract_first()
@@ -195,14 +200,14 @@ class TripadvSpider(Spider):
                 except Exception as e:
                     print(type(e), e)
                     mo_yr_visited = 0
-                
+                   
                 # use selenium to click on 1st 'read more' element as that expands all other review texts
                 try:
                     readmore = driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
-                    WebDriverWait(driver, 15)
+                    WebDriverWait(driver, 20)
                     readmore.click()
                     # Slows down the text expansion so the text can be scraped
-                    time.sleep(2)
+                    time.sleep(3)
                 except:
                     pass
 
@@ -234,7 +239,7 @@ class TripadvSpider(Spider):
                 except Exception as e:
                     print(type(e), e)
                     num_helpful_user = 0
-                
+                    
                 # get user rating
                 rating = int(review.xpath('.//div[@data-test-target="review-rating"]//span/@class').extract_first().split(' bubble_')[1].strip('0') or '0')
 
@@ -266,3 +271,8 @@ class TripadvSpider(Spider):
                 yield item
 
         driver.quit()
+
+            
+
+
+    
