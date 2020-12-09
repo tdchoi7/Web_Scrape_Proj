@@ -135,7 +135,7 @@ class TripadvSpider(Spider):
         # 'Los Angeles'
         
         # get number of pages to create list of urls for each review page
-        num_pages = int(response.xpath('//a[@class="pageNum "]/text()').extract()[-1])
+        # num_pages = int(response.xpath('//a[@class="pageNum "]/text()').extract()[-1])
         # each page (starting from 0) has a '-or#' sequence after "Reviews" where the multiple of 5
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
