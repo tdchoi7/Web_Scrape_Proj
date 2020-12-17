@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+import calendar
 from datetime import datetime
 import time
 import re
@@ -32,13 +33,15 @@ class TripadvSpider(Spider):
         'https://www.tripadvisor.com/Attractions-g35805-Activities-Chicago_Illinois.html',
         ]
 
+    driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
+
 
     def get_mo_yr_posted(self, mo_yr_post):
         """
         Converts the scraped review posted date to:
         'month year' format
         """
-        import calendar
+        # import calendar
 
         # grabs month and day/year
         mo_yr_post_group = re.search('(\S+) (\d+)', mo_yr_post)
@@ -101,16 +104,16 @@ class TripadvSpider(Spider):
                 # do not have to account for those urls in parse_attractions_page's result_urls
             attrctn_to_rvw = response.xpath('//div[@class="_20eVZLwe"]/div/a/@href').extract()[0:9:2]
            
-            # add the partial urls to the root url for the full url for each attraction review page
+            # # add the partial urls to the root url for the full url for each attraction review page
             review_page_1st_urls = [self.allowed_urls[0] + partial for partial in attrctn_to_rvw]
         
         else:
             
             # get the partial urls for the reviews of the top 10 attractions
-            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[:5]
-                # results in:
-                # ['/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html']
-            
+            attrctn_to_rvw = response.xpath('//a[@class="_255i5rcQ"]/@href').extract()[0:5]
+            # results in:
+            # ['/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html']
+        
             # add the partial urls to the root url for the full url for each attraction review page
             review_page_1st_urls = [self.allowed_urls[0] + partial + '#REVIEWS' for partial in attrctn_to_rvw]
             # results in:
@@ -135,14 +138,18 @@ class TripadvSpider(Spider):
         # 'Los Angeles'
         
         # get number of pages to create list of urls for each review page
-        # num_pages = int(response.xpath('//a[@class="pageNum "]/text()').extract()[-1])
+        num_pages = int(response.xpath('//a[@class="pageNum "]/text()').extract()[-1])
         # each page (starting from 0) has a '-or#' sequence after "Reviews" where the multiple of 5
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
         # gets the first 100 pages of reviews (totaling 500 reviews) for each attraction
             # this will get us 2500 total reviews per city
-        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(99)] # range(2,3)
+        if num_pages < 399:
+            result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(num_pages)] # range(2,3)
+        else:
+            result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(399)] # range(2,3)
+        
         result_urls.insert(0, response.url)
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
@@ -162,16 +169,16 @@ class TripadvSpider(Spider):
         reviews = response.xpath('.//div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')
         
         # use Selenium to switch to active browser
-        driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
-        driver.get(response.url)
-        WebDriverWait(driver, 10)
-        driver.maximize_window()
+        # driver = webdriver.Chrome(r'C:\Users\tdcho\OneDrive\Desktop\NYCDSA\chromedriver.exe')
+        self.driver.get(response.url)
+        WebDriverWait(self.driver, 10)
+        self.driver.maximize_window()
         # WebDriverWait(driver, 10)
-        driver.switch_to.active_element
+        self.driver.switch_to.active_element
         # WebDriverWait(driver, 10)
 
         # gets the list of reviews using Selenium
-        wait_review = WebDriverWait(driver, 10)
+        wait_review = WebDriverWait(self.driver, 10)
         selenium_reviews = wait_review.until(EC.presence_of_all_elements_located((By.XPATH, './/div[@class="Dq9MAugU T870kzTX LnVzGwUB"]')))
 
         # allows for concurrent scraping using Selenium and Scrapy
@@ -207,11 +214,11 @@ class TripadvSpider(Spider):
                
             # use selenium to click on 1st 'read more' element as that expands all other review texts
             try:
-                readmore = driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
-                WebDriverWait(driver, 10)
+                readmore = self.driver.find_element_by_xpath('//span[@class="_3maEfNCR"]')
+                WebDriverWait(self.driver, 10)
                 readmore.click()
                 # Slows down the text expansion so the text can be scraped
-                time.sleep(1)
+                time.sleep(3)
             except:
                 pass
 
@@ -274,7 +281,7 @@ class TripadvSpider(Spider):
 
             yield item
 
-        driver.quit()
+    # driver.close()
 
             
 
