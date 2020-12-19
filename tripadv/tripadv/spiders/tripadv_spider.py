@@ -143,7 +143,7 @@ class TripadvSpider(Spider):
         if num_pages < 399:
             result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(num_pages)]
         else:
-            result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(399)] # range(2,3)
+            result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(399)]
         
         result_urls.insert(0, response.url)
         # results in:
