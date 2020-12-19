@@ -15,3 +15,25 @@ node_modules
 .scrapy
 
 .mydriver
+tripadv/Analysis.ipynb
+tripadv/Analysis.ipynb
+tripadv/Analysis_to_be_Copied.ipynb
+.ipynb_checkpoints/Analysis-checkpoint.ipynb
+FromSlides.py
+.ipynb_checkpoints/Untitled-checkpoint.ipynb
+tripadv/.ipynb_checkpoints/1_Combine_CSVs-checkpoint.ipynb
+tripadv/.ipynb_checkpoints/2_Analysis_Boston-checkpoint.ipynb
+tripadv/.ipynb_checkpoints/2_Analysis_Chicago-checkpoint.ipynb
+tripadv/.ipynb_checkpoints/2_Analysis_LosAngeles-checkpoint.ipynb
+tripadv/.ipynb_checkpoints/2_Analysis_NewYork-checkpoint.ipynb
+tripadv/.ipynb_checkpoints/Analysis_Helpful_Reviews_Boston-checkpoint.ipynb
+tripadv/Analysis.ipynb
+tripadv/Analysis_to_be_Copied.ipynb
+tripadv/debug.log
+tripadv/tripadv/__pycache__/items.cpython-37.pyc
+tripadv/tripadv/__pycache__/pipelines.cpython-37.pyc
+tripadv/tripadv/__pycache__/settings.cpython-37.pyc
+tripadv/tripadv/__pycache__/items.cpython-37.pyc
+tripadv/tripadv/__pycache__/items.cpython-37.pyc
+*.pyc
+*.pyc
