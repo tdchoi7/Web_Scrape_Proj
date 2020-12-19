@@ -135,14 +135,16 @@ class TripadvSpider(Spider):
         # 'Los Angeles'
         
         # get number of pages to create list of urls for each review page
-        # num_pages = int(response.xpath('//a[@class="pageNum "]/text()').extract()[-1])
+        num_pages = int(response.xpath('//a[@class="pageNum "]/text()').extract()[-1])
         # each page (starting from 0) has a '-or#' sequence after "Reviews" where the multiple of 5
         # indicates the number of the last review of the previous page
             # therefore, '-or0' is pg 1, '-or5' is pg 2, '-or10' is page 3, etc
 
-        # gets the first 100 pages of reviews (totaling 500 reviews) for each attraction
-            # this will get us 2500 total reviews per city
-        result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(99)] # range(2,3)
+        if num_pages < 399:
+            result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(num_pages)]
+        else:
+            result_urls = [f'Reviews-or{(i+1)*5}-'.join(response.url.split('Reviews-')) for i in range(399)] # range(2,3)
+        
         result_urls.insert(0, response.url)
         # results in:
         # ['www.tripadvisor.com/Attraction_Review-g32655-d147966-Reviews-The_Getty_Center-Los_Angeles_California.html#REVIEWS',
