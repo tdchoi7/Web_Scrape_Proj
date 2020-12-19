@@ -23,17 +23,3 @@ class TripadvItem(scrapy.Item):
     mo_yr_posted_final = scrapy.Field()
     mo_yr_visited = scrapy.Field()
     num_helpful_votes = scrapy.Field()
-
-    # item['attraction_city'] = response.meta['attraction_city']
-    #         item['attraction'] = response.meta['attraction']
-
-    #         item['user'] = user
-    #         item['user_city'] = user_city
-    #         item['rating'] = rating
-    #         item['rev_title'] = rev_title
-    #         item['num_contributions_user'] = num_contributions_user
-    #         item['num_helpful'] = num_helpful
-    #         item['rev_text'] = rev_text
-    #         item['mo_yr_posted'] = mo_yr_posted
-    #         item['mo_yr_visited'] = mo_yr_visited
-    #         item['num_helpful_rev'] = num_helpful_rev
