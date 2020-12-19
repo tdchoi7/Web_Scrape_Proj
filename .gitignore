@@ -36,9 +36,14 @@ tripadv/tripadv/__pycache__/settings.cpython-37.pyc
 tripadv/tripadv/__pycache__/items.cpython-37.pyc
 tripadv/tripadv/__pycache__/items.cpython-37.pyc
 *.pyc
-*.pyc
+
 tripadv/Untitled.ipynb
 tripadv/Analysis.ipynb
-*.pyc
+
 tripadv/Untitled.ipynb
-*.pyc
+
+tripadv/tripadv/settings.py
+tripadv/tripadv/pipelines.py
+tripadv/tripadv/middlewares.py
+tripadv/tripadv/items.py
+tripadv/tripadv/__init__.py
