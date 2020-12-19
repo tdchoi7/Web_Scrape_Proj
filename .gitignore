@@ -47,3 +47,6 @@ tripadv/tripadv/pipelines.py
 tripadv/tripadv/middlewares.py
 tripadv/tripadv/items.py
 tripadv/tripadv/__init__.py
+tripadv/tripadv/items.py
+tripadv/tripadv/middlewares.py
+tripadv/tripadv/pipelines.py
